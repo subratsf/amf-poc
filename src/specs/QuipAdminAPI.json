@@ -1,0 +1,2643 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Quip Admin API",
+      "version": "1",
+      "description": "## Summary\nFor governance and security purposes, Quip makes available a set of APIs to\nenable specific users to see all content within a Quip site and to take\nactions against that content.\n\n## Requirements\nThis API requires that you have first followed the setup instructions for\nthe <a href=\"/dev/automation/documentation\" target=\"_blank\">Quip Automation API</a>.\n\nTo call this API, the access token you use must be for a user who is an\nadmin.\n\nYou must also have the admin API enabled for your quip instance. Ask your\nsupport representative if you would like this functionality enabled.\n\n# Rate Limit\nQuip’s APIs are rate limited by number of requests per minute per user -\nwith a default of 50 requests per minute. API responses include a few\ncustom headers to aid programmers implement backoffs in their code.\nThese headers are:\n\n`X-Ratelimit-Limit`: The number of requests/min the user can make<br>\n`X-Ratelimit-Remaining`: The number of requests remaining this user\ncan make within the minute - this number changes with each request.<br>\n`X-Ratelimit-Reset`: The UTC timestamp for when the rate limit will\nreset\n\nNote: If you believe your application requires escalated rate limits\nplease reach out to support and explain your use case and rationale.\n\n# Authentication\n<SecurityDefinitions />\n"
+    },
+    "servers": [
+      {
+        "url": "https://platform.quip.com/1"
+      }
+    ],
+    "tags": [
+      {
+        "name": "Threads"
+      },
+      {
+        "name": "Messages"
+      },
+      {
+        "name": "Users"
+      },
+      {
+        "name": "Folders"
+      },
+      {
+        "name": "Events (requires subscription)",
+        "description": "<pre style=\"color:#353535\">\n| Event Type           | Description                                                       |\n| -------------------- | ----------------------------------------------------------------- |\n| create-thread        | A thread was created. Additional data on the type of creation can |\n|                      | be found in sub_action; the options are: create-new,              |\n|                      | create-import, create-copy                                        |\n| open-thread          | A thread was opened                                               |\n| delete-thread        | A thread was deleted                                              |\n| share-thread         | Additional members were added to a thread. Additional data on the |\n|                      | type of sharing can be found in sub_action                        |\n| unshare-thread       | Members of a thread were removed                                  |\n| move-thread          | A thread was moved from one folder into another folder, a thread  |\n|                      | is deleted and moved to trash, or a thread is restored from trash |\n|                      | and moved back to a folder                                        |\n| send-message         | A message was sent. This event type is a subset of create-message,|\n|                      | including annotation, sending message in conversation pane, and   |\n|                      | sending a direct message                                          |\n|                      |                                                                   |\n|                      | NOTE: Because send-message is a subset of create-message, We      |\n|                      | recommend developers use create-message                           |\n| delete-message       | A message was deleted                                             |\n| edit-message         | A message was edited                                              |\n| create-message       | A message was created and sent. Additional data on the type of    |\n|                      | message can be found in sub_action. The options are: annotation,  |\n|                      | sending message in conversation pane, sending a direct message,   |\n|                      | and ending an edit session, which sends edits to the conversation |\n|                      | pane                                                              |\n|                      |                                                                   |\n|                      | NOTE: create-message is the preferred event type moving forward;  |\n|                      | we advise developers to rely on this instead of send-message      |\n| create-folder        | A folder was created                                              |\n| delete-folder        | A folder was deleted                                              |\n| open-folder          | A folder was opened                                               |\n| move-folder          | A folder was moved                                                |\n| copy-folder          | A folder was copied                                               |\n| share-folder         | A folder was shared                                               |\n| unshare-folder       | Members of a folder were removed                                  |\n| login                | A site member logged in                                           |\n| print-document       | A thread was printed                                              |\n| export-thread        | A thread was exported                                             |\n| upload_blob-thread   | A file was uploaded to a thread                                   |\n| create-user          | A site member was created                                         |\n| disable-user         | A site member was disabled                                        |\n| admin_edit           | An admin took an action in the admin console                      |\n| admin_api_call       | An admin API endpoint was accessed                                |\n| restore-thread       | Thread removed from the trash by a user, restoring access         |\n| create-policy        | A data retention or data hold policy was created                  |\n| retire-policy        | A data retention or data hold policy was retired                  |\n| attach-policy        | A data retention or data hold policy was attached to a thread     |\n| execute-policy       | The policy action on a data hold or data retention was executed   |\n| create-link          | A shareable link for a thread was created                         |\n| edit-link            | A shareable link's access to a thread was changed                 |\n| delete-link          | A shareable link for a thread was disabled                        |\n| download_blob-thread | A file attachment of a thread downloaded by user                  |\n| search_threads       | A search query across corpus of threads                           |\n| receive-invite       | A site member was added to a thread                               |\n| receive_in_folder-thread | A thread was added to a folder your company owns              |\n| receive_folder       | A site member was added to a folder                               |\n| joined_by_link-thread| A member joined a thread your company owns by link share          |\n| join-thread          | A site member joins a thread by link thread                       |\n| create-link          | A link for a thread or folder your company was created            |\n| joined_by_link-folder| A member joined a folder your company owns by link share          |\n| join-folder          | A site member joins a folder by link thread                       |\n</pre>\n\n### Event JSON\n\nResponses format individual events as a JSON dictionary described below.\n\n<pre style=\"color:#353535\">\n| Field                       | Description                                                      |\n|------------------------------------------------------------------------------------------------|\n| time_usec                   | Server timestamp in microseconds                                 |\n| ip                          | IP address of the client, if present                             |\n| user_agent                  | Software agent acting on behalf of the user, such as a browser   |\n| device                      | Platform type used by user                                       |\n| quip_version                | Software version, only present for some device types             |\n| id                          | Unique id for the event                                          |\n| action                      | Action taken by user                                             |\n| sub_action                  | More detailed description of the action taken by user            |\n| object                      | What the action acted upon                                       |\n| child_object                | More detailed description of the object the action is taken upon |\n| user (flattened)            | (not a field, represented by fields below)                       |\n| user_id                     | Unique id of user associated to the event                        |\n| thread (flattened)          | (not a field, represented by fields below)                       |\n| thread_id                   | Unique id of thread associated to the event                      |\n| thread__author_id           | Thread creator's user_id                                         |\n| thread__thread_type         | Valid values: NONE, DOCUMENT, TWO_PERSON_CHAT, GROUP_CHAT,       |\n|                             | CHANNEL, FILE_UPLOAD, TASKS_SEARCH, ALERTS_FEED                  |\n| folder (flattened)          | (not a field, represented by fields below)                       |\n| folder_id                   | Unique id of folder associated to the event                      |\n| folder__author_id           | Folder creator's user_id                                         |\n| folder__folder_type         | Valid values: PRIVATE, SHARED                                    |\n| company (flattened)         | (not a field, represented by fields below)                       |\n| company_id                  | Unique id of company for user associated to the event            |\n| document_id                 | Unique id of document associated to the event                    |\n| link (flattened)            | (not a field, represented by fields below)                       |\n| link_id                     | Unique id for a shareable url link to a thread                   |\n| link__show_conversation     | Whether access via the link shows conversation pane              |\n| link__show_diff             | Whether access via the link shows the document changes/diffs     |\n| link__allow_messages        | Whether access via the link allows comments                      |\n| link__enable_request_access | Whether access via the link allows requesting more access        |\n| link__link_sharing_mode     | Updated access level via the link                                |\n|                             | Valid values: NONE, VIEW, EDIT                                   |\n| link__allow_access_outside_domain | Whether access via the link requires authentication to     |\n|                             | owning organization                                              |\n| recipient_ids               | User ids of members shared in a `share` action                   |\n| src_folder_ids              | Where the object is moved from in actions like `move`            |\n| dst_folder_ids              | Where the object is moved to in action like `move`               |\n| annotation (flattened)      | (not a field, represented by fields below)                       |\n| annotation_id               | Unique id of annotation associated to the event                  |\n| message (flattened)         | (not a field, represented by fields below)                       |\n| message_id                  | Unique id of message associated to the event                     |\n| blob (flattened)            | (not a field, represented by fields below)                       |\n| blob_id                     | Unique id of blob associated to the event                        |\n| policy (flattened)          | (not a field, represented by fields below)                       |\n| policy_id                   | Unique id of policy associated to the event                      |\n</pre>\n"
+      },
+      {
+        "name": "Quarantine"
+      },
+      {
+        "name": "Company"
+      },
+      {
+        "name": "Admin Roles"
+      },
+      {
+        "name": "Governance (requires subscription)"
+      }
+    ],
+    "components": {
+      "securitySchemes": {
+        "OAuth2": {
+          "flows": {
+            "authorizationCode": {
+              "authorizationUrl": "https://platform.quip.com/1/oauth/login",
+              "refreshUrl": "https://platform.quip.com/1/oauth/access_token",
+              "scopes": {
+                "ADMIN_MANAGE": "",
+                "ADMIN_READ": "",
+                "ADMIN_WRITE": ""
+              },
+              "tokenUrl": "https://platform.quip.com/1/oauth/access_token"
+            }
+          },
+          "type": "oauth2"
+        }
+      }
+    },
+    "paths": {
+      "/admin/blob/{thread_id}/{blob_id}": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Get a Blob from a Thread",
+          "operationId": "getBlob",
+          "description": "Returns the contents of specified blob from the thread.\n",
+          "parameters": [
+            {
+              "name": "thread_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "description": "The thread ID that contains the desired blob",
+              "required": true,
+              "example": "{{edit_document_thread_id}}"
+            },
+            {
+              "name": "blob_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "description": "The blob ID to return",
+              "required": true,
+              "example": "{{blob_id}}"
+            },
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/blob/{thread_id}": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Add a Blob to a Thread",
+          "operationId": "addBlobToThread",
+          "description": "Uploads an image or other blob to the given thread. Returns a `url`\nthat may be used in the `content` field of\n[Edit Document](#operation/editDocument)\nrequests and an `id` that may be used in the `attachment` field of\n[Add a Message](#operation/addMessage).\n\n\n### Response Fields\n\n**`id`**\n\n\nThe new blob ID.\n\n\n**`url`**\n\n\nThe relative URL to reference the blob in document edits.\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "blob": {
+                      "type": "string",
+                      "description": "The image or blob binary\n",
+                      "format": "binary"
+                    },
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    }
+                  },
+                  "required": [
+                    "blob",
+                    "company_id"
+                  ]
+                }
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "thread_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "example": "{{edit_document_thread_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Example Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "id": "DiPp1ZQyC8QUtvBT4vojzM",
+                      "url": "/blob/LeSAAAqaCfc/DiPp1ZQyC8QUtvBT4vojzM"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/company/collaborating-companies/{external_company_id}": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Company"
+          ],
+          "summary": "Get Collaborating Company",
+          "operationId": "getCollaboratingCompany",
+          "description": "Returns information about a company you are collaborating with,\nincluding the threads you are collaborating on\n",
+          "parameters": [
+            {
+              "name": "external_company_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to find."
+            },
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use.",
+              "example": "{{admin_company_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Get Collaborating Company",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "company_id": "MMeAcAoWgkU",
+                      "company_name": "Salesforce",
+                      "type": "External",
+                      "number_of_shared_threads": 2
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/company/collaborating-companies/list": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Company"
+          ],
+          "summary": "Get Collaborating Companies",
+          "operationId": "getCollaboratingCompanies",
+          "description": "Returns all companies you are collaborating with\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use."
+                    }
+                  },
+                  "required": [
+                    "company_id"
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Get Collaborating Companies",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "example": [
+                      {
+                        "company_id": "MMeAcAoWgkU",
+                        "company_name": "Salesforce",
+                        "type": "External",
+                        "number_of_shared_threads": 2
+                      },
+                      {
+                        "company_id": "cDMAcA8KJDk",
+                        "company_name": "Quip",
+                        "type": "Managed",
+                        "number_of_shared_threads": 1
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/company/managed-sites": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Company"
+          ],
+          "summary": "Get Managed Sites",
+          "operationId": "getManagedSites",
+          "description": "Returns a list of all managed site IDs for the admin's company.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use.",
+              "example": "{{admin_company_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        },
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Company"
+          ],
+          "summary": "Create Managed Sites",
+          "operationId": "createManagedSites",
+          "description": "Creates a batch of new managed sites for the admin's company.\n\n### Request Body\n\nThe request body consists of one site object, or an array of site\nobjects. A site object is defined below.\n\n\n`company_id`\n\nThe company to use\n\n`site_type`\n\n\"partner\" or \"testing\"\n\n`name`\n\nThe name of the new managed site\n\n`subdomain`\n\nThe subdomain for the new managed site\n\n`only_able_to_share_with_main_site` OPTIONAL\n\ntrue/false, Restrict external sharing to only your company’s main site.\ndefault: true\n\n`add_site_to_external_sharing_allowlist` OPTIONAL\n\ntrue/false, Add this site to your company's external sharing allowlist\n(if enabled). default: true\n",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/json"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Example Input",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "example": [
+                      {
+                        "company_id": "VIPAcAE2hTZ",
+                        "site_type": "testing",
+                        "name": "red",
+                        "subdomain": "red",
+                        "only_able_to_share_with_main_site": true,
+                        "add_site_to_external_sharing_allowlist": false
+                      },
+                      {
+                        "company_id": "VIPAcAE2hTZ",
+                        "site_type": "partner",
+                        "name": "blue",
+                        "subdomain": "blue"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Company"
+          ],
+          "summary": "Delete Managed Sites",
+          "operationId": "deleteManagedSites",
+          "description": "Disables a batch of managed sites.\n",
+          "parameters": [
+            {
+              "name": "managed_company_ids",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "A comma separated list of managed companies to disable."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/data-hold-policy": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Governance (requires subscription)"
+          ],
+          "summary": "Get Data Hold",
+          "operationId": "getDataHold",
+          "description": "Returns the data hold policy.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use.",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "policy_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The id of the policy to get."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        },
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Governance (requires subscription)"
+          ],
+          "summary": "Create Data Hold",
+          "operationId": "createDataHold",
+          "description": "Creates a data hold policy.\n\n### Request Body\n\n`company_id`\nThe company to use\n\n`name`\nThe name of the data hold policy.\n\n`start_date`\nThe start date of the data hold in the format \"yyyy-mm-dd\"\n\n`end_date`\nThe end date of the data hold in the format \"yyyy-mm-dd\"\n\n`member_emails`\nAn array of emails to add to the data hold.\n",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/json"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        },
+        "delete": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Governance (requires subscription)"
+          ],
+          "summary": "Retire Data Hold",
+          "operationId": "retireDataHold",
+          "description": "Retires a data hold policy.\n\n### Request Body\n\n`company_id`\nThe company to use\n\n`policy_id`\nThe id of the data hold policy to retire.\n",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/json"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/data-hold-policy/users": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Governance (requires subscription)"
+          ],
+          "summary": "Add Users to Data Hold",
+          "operationId": "addUsersToDataHold",
+          "description": "Adds users to a data hold policy.\n\n### Request Body\n\n`company_id`\nThe company to use\n\n`policy_id`\nThe id of the data hold policy to add users to.\n\n`member_emails`\nAn array of emails to add to the data hold.\n",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/json"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        },
+        "delete": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Governance (requires subscription)"
+          ],
+          "summary": "Remove Users from Data Hold",
+          "operationId": "removeUsersFromDataHold",
+          "description": "Removes users from a data hold policy.\n\n### Request Body\n\n`company_id`\nThe company to use\n\n`policy_id`\nThe id of the data hold policy to remove users from.\n\n`member_emails`\nAn array of emails to remove from the data hold.\n",
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "Bearer {{access_token}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/events/1/cursor/create": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Events (requires subscription)"
+          ],
+          "summary": "Get an Event Cursor",
+          "operationId": "getEventCursor",
+          "description": "Gets a starting cursor to retrieve historical events.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "user_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "description": "The user to use",
+              "example": "<user_id>"
+            },
+            {
+              "name": "event_types",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "example": "<event_type1,event_type2,...>"
+            },
+            {
+              "name": "since_timestamp",
+              "in": "query",
+              "schema": {
+                "type": "integer"
+              },
+              "required": true,
+              "description": "in microseconds, e.g. (echo $(( `gdate +%s%N` / 1000 - (6 * 3600 * 1000000) )))",
+              "example": 1554241192914801
+            },
+            {
+              "name": "until_timestamp",
+              "in": "query",
+              "schema": {
+                "type": "integer"
+              },
+              "required": true,
+              "description": "In microseconds, e.g. (echo $(( `gdate +%s%N` / 1000 - (5 * 3600 * 1000000) ))",
+              "example": 1554244792914801
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Get an Event Cursor",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "next_cursor": "..."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/events/1/cursor/realtime/create": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Events (requires subscription)"
+          ],
+          "summary": "Get a Cursor for Near Real-Time Events",
+          "operationId": "getRealtimeEventCursor",
+          "description": "Gets a starting cursor to retrieve historical events.\n\nNote that near real-time cursors expire 24 hours after creation,\nincluding `next_cursor`s provided when getting a batch of events.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "user_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "description": "The user to use",
+              "example": "<user_id>"
+            },
+            {
+              "name": "event_types",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "example": "<event_type1,event_type2,...>"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Get a Cursor for Near Real-Time Events",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "next_cursor": "..."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/events/1/events/get": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Events (requires subscription)"
+          ],
+          "summary": "Get Next Batch of Events",
+          "operationId": "getEvents",
+          "description": "Returns the next batch of historical events from the cursor argument.\n\nResponse contains list of zero or more events, whose format and\ncontent fields are described above.\n",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The \"next_cursor\" value from the previous call.",
+              "example": "<cursor>"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Get Next Batch of Events",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "events": [
+                        "..."
+                      ],
+                      "more_to_read": true,
+                      "next_cursor": "..."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/events/1/events/realtime/get": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Events (requires subscription)"
+          ],
+          "summary": "Get Next Batch of Near Real-Time Events",
+          "operationId": "getRealtimeEvents",
+          "description": "Returns the next batch of historical events from the cursor argument.\n\nResponse contains list of zero or more events, whose format and\ncontent fields are described above.\n",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The \"next_cursor\" value from the previous call.",
+              "example": "<cursor>"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Get Next Batch of Near Real-Time Events",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "events": [
+                        "..."
+                      ],
+                      "more_to_read": true,
+                      "next_cursor": "..."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/folders/{id}": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Folders"
+          ],
+          "summary": "Get a Folder",
+          "operationId": "getFolder",
+          "description": "Get information about any folder.\n",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "description": "The folder ID to look up.",
+              "required": true,
+              "example": "{{admin_get_folder_id}}"
+            },
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Get a Folder",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "folder": {
+                        "title": "Quip",
+                        "creator_id": "KLf9EAPrxbs",
+                        "id": "RKH9OAELPKV",
+                        "created_usec": 1497474937520657,
+                        "updated_usec": 1558247457514983
+                      },
+                      "member_ids": [
+                        "YNK9EAU71mc",
+                        "PEW9EAtTnrV",
+                        "aBd9EAl8R0H",
+                        "MVT9EACSny8",
+                        "LJa9EAtQi98",
+                        "ROS9EAGOj1u"
+                      ],
+                      "children": [
+                        {
+                          "thread_id": "aXM9AASQOGr"
+                        },
+                        {
+                          "thread_id": "cYX9AAfS6ma"
+                        },
+                        {
+                          "thread_id": "WVD9AA1grdh"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/message/delete": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Messages"
+          ],
+          "summary": "Delete a Message",
+          "operationId": "deleteMessage",
+          "description": "Delete a message with the given message ID.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "message_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The ID of the message"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/message/{message_id}": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Messages"
+          ],
+          "summary": "Get a Message",
+          "operationId": "getMessage",
+          "description": "Returns a message with the given message ID.\n",
+          "parameters": [
+            {
+              "name": "message_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The message ID to view the message for."
+            },
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/messages/{thread_id}": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Messages"
+          ],
+          "summary": "Get Messages for a Thread",
+          "operationId": "getMessagesForThread",
+          "description": "Returns a list of the most recent messages for the given thread,\nordered reverse-chronologically.\n",
+          "parameters": [
+            {
+              "name": "thread_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The thread ID to view messages for."
+            },
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use.",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "count",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Number of messages to return. Default is 25, max is 100.\n"
+            },
+            {
+              "name": "max_created_usec",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "description": "If given, we return messages updated before the given `max_created_usec`, which is a UNIX timestamp in microseconds. To use this argument for paging, you can use the `created_usec` field in the returned message objects."
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "description": "ASC or DESC. Changes the order of the returned messages.\n"
+            },
+            {
+              "name": "message_type",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "description": "One of `message` (default) or `edit`. If `message_type` of `edit` is provided, only document edit messages will be returned."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/quarantine": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Quarantine"
+          ],
+          "summary": "Add Quarantine",
+          "operationId": "addQurantine",
+          "description": "Quarantines a given object, either a message or a document or a blob.\nQuarantining a document hides all document content, including the\ntitle, and blocks all edits.\n\nQuarantining a message hides all message content.\n\nQuarantining a blob prevents accessing the blob.\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "object_id": {
+                      "type": "string",
+                      "description": "The ID of the thread (for a document) or message or blob to quarantine"
+                    },
+                    "blob_thread_id": {
+                      "type": "string",
+                      "description": "If quarantining a blob, this is the thread id to use\n"
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "object_id"
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        },
+        "delete": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Quarantine"
+          ],
+          "summary": "Remove Quarantine",
+          "operationId": "removeQurantine",
+          "description": "Remove a document or message from quarantine. This will restore its\ncontent to its pre-quarantine state.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "object_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The ID of the thread (for a document) or message or blob to remove from quarantine",
+              "example": "{{quarantine_object_id}}"
+            },
+            {
+              "name": "blob_thread_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "description": "If quarantining a blob, this is the thread id to use",
+              "example": "{{quarantine_blob_thread_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/add-members": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Add People to a Thread or Add a Thread to Folders",
+          "operationId": "addThreadMembers",
+          "description": "The member_ids parameter must contain a list of folder IDs and user\nIDS. Specified users will be added to the document and the thread\nwill be added to the specified folders.\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "thread_id": {
+                      "type": "string",
+                      "description": "The thread to which you want to add folders and users."
+                    },
+                    "member_ids": {
+                      "type": "string",
+                      "description": "A comma-separated list of folder IDs and user IDs. We add each user ID individually to the thread. We add the thread to each of the specified folder IDs.\n"
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "thread_id",
+                    "member_ids"
+                  ]
+                }
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/x-www-form-urlencoded"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/copy-document": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ",
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Copy a Document or Template",
+          "operationId": "copyDocumentOrTemplate",
+          "description": "Makes a copy of the document specified by the `thread_id` argument.\nThe source document can also be treated as a template. To use the\nsource document as a template, the `values` query argument must\ncontain a valid JSON dictionary that consists of string keys and\nwhose values are either string, numbers or other dictionaries. The\nendpoint will scan the document for a text pattern like:\n\n\n```\n\n[[varname]]\n\n```\n\n\nwhere varname consists of a series of alphanumeric characters and\nunderscores (_). It will then look up 'varname' in the values\ndictionary and replace the pattern with its value.\n\n\nIn addition, patterns can contain one or more dots (.) like:\n\n\n```\n\n[[varname1.varname2]]\n\n```\n\n\nIn this case, the endpoint will separate the string into 'varname1'\nand 'varname2'. If it finds varname1 in the first dictionary, it\nwill expect that value to be another dictionary and will then use\nvarname2 to look for another value. For example, if `values` has the\nfollowing JSON representation:\n\n\n```\n\n{ \"user\": { \"name\": \"Arnie\", \"age\": \"34\" }}\n\n```\n\n\nThe template variable `[[user.name]]` will be substituted with\n'Arnie'.\n\n\nIf the key specified in the template variable can't be found in the\n`values` dictionary, then the template variable pattern is left\nunchanged in the document.\n\n\n### Response Fields\n\n\n**`thread`**\n\n\nA dictionary that contains an id field with the thread_id of the new\ndocument\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "thread_id": {
+                      "type": "string",
+                      "description": "The id or secret of the document to be copied\n"
+                    },
+                    "values": {
+                      "type": "string",
+                      "description": "A string or file containing a valid JSON dictionary whose keys are strings and whose values are either strings or dictionaries. Keys can only contain the characters A-Z, a-z, 0-9, .(dot) and _(underscore). If not supplied, the source document will not be treated as a template. Any valid JSON dictionary is acceptable. It can contain arrays but the key syntax does not provide any way to navigate through them or print them.\n"
+                    },
+                    "member_ids": {
+                      "type": "string",
+                      "description": "List of member ids that will be added to the new document\n"
+                    },
+                    "folder_ids": {
+                      "type": "string",
+                      "description": "A list of folder ids the new document will be added to\n"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "A string value to be the title of the new document. If this isn't the same string as the first section in the doc, it will get overwritten with the first section when the document is saved.\n"
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "thread_id"
+                  ]
+                }
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/x-www-form-urlencoded"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Example Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "thread": {
+                        "id": "AbFAAALoIx9"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/delete": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Delete a Thread",
+          "operationId": "deleteThreads",
+          "description": "Deletes the thread with the specified id or secret.\n\n\n### RESPONSE FIELDS\n\n\nNo JSON is returned by this endpoint when successful. On an error,\nthere are three fields returned:\n\n\n`error`\n\n\nThe type of error\n\n\n`error_code`\n\n\nThe status code of the http request\n\n\n`error_description`\n\n\nA short description of why the request failed\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "thread_id": {
+                      "type": "string",
+                      "description": "The thread whose document you want to modify"
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "thread_id"
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/edit-document": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Edit A Document",
+          "operationId": "editDocument",
+          "description": "Incrementally modifies the content of a document.\n\n\nWe determine where to insert the new content based on the `location`\nargument. Some `location` values are relative to another section,\nwhich is specified by `section_id`, enabling fine-grained editing. For\nexample, to add an item to the end of a checklist, you would send the\nID of the last list item in the list as the `section_id` and send `2:\nAFTER_SECTION` as the `location`.\n\n\nTo get the IDs of sections in an existing document, parse the HTML\nreturned by the methods above. Every paragraph, list item, and table\ncell will have an HTML `id` attribute you can use in this method.\n\n\n`content` is required for all calls unless the location is `5:\nDELETE_SECTION`, which indicates we should simply delete the specified\n`section_id`. Any images referenced must have been previously\n[uploaded](#operation/addBlobToThread) separately.\n\n\nWe return the updated thread in the format specified in [Get\nThread](#operation/getThread)\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "thread_id": {
+                      "type": "string",
+                      "description": "The thread whose document you want to modify"
+                    },
+                    "format": {
+                      "type": "string",
+                      "description": "Either `html` or `markdown`. Defaults to `html`.\n"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "The html or [markdown](https://daringfireball.net/projects/markdown/) content of the new document."
+                    },
+                    "section_id": {
+                      "type": "string",
+                      "description": "The id for the section you want to modify. Required for some `location` values."
+                    },
+                    "location": {
+                      "type": "string",
+                      "description": "Where we should insert the new content. Defaults to `0: APPEND`.\n\n- `0: APPEND` - Append to the end of the document.\n- `1: PREPEND` - Prepend to the beginning of the document.\n- `2: AFTER_SECTION` - Insert after the section specified by section_id.\n- `3: BEFORE_SECTION` - Insert before the section specified by section_id.\n- `4: REPLACE_SECTION` - Delete the section specified by section_id and insert the new content at that location.\n- `5: DELETE_SECTION` - Delete the section specified by section_id (no content required)."
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "thread_id",
+                    "content",
+                    "section_id",
+                    "location"
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/edit-share-link-settings": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Edit Thread Share Link Settings",
+          "operationId": "editShareLinkSettings",
+          "description": "Allows the api user to change the link-shared settings of any thread\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "thread_id": {
+                      "type": "string",
+                      "description": "The ID of the thread to modify"
+                    },
+                    "allow_external_access": {
+                      "type": "string",
+                      "description": "true/false, indicates whether people outside the thread's company can access the document"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "description": "valid values are: `edit`, `view`, or `none`. Indicates the access that users will have to the thread."
+                    },
+                    "enable_request_access": {
+                      "type": "string",
+                      "description": "true/false, allow users to request access to the document. When a user tries to access a document that they don't have access to,  they are presented with a dialog informing them they do not have access to this document. If `enable_request_access` is true, this dialog will contain a “Request Access” button."
+                    },
+                    "show_conversation": {
+                      "type": "string",
+                      "description": "true/false, enable or disable the conversation panel on the right of the document."
+                    },
+                    "show_edit_history": {
+                      "type": "string",
+                      "description": "true/false, allow users to see the edit history of the document."
+                    },
+                    "allow_messages": {
+                      "type": "string",
+                      "description": "true/false, allow messages in the conversation  panel.\n"
+                    },
+                    "allow_comments": {
+                      "type": "string",
+                      "description": "true/false, allow comments on the content of this thread.\n"
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "thread_id"
+                  ]
+                }
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/x-www-form-urlencoded"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/{thread_id}/export/docx": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Export Document to .docx",
+          "operationId": "exportThreadToDocx",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "thread_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "example": "{{new_document_thread_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/{thread_id}/export/pdf": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Export Slides to .pdf",
+          "operationId": "exportThreadToPdf",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "thread_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "example": "{{new_document_thread_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/{thread_id}/export/xlsx": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Export Spreadsheet to .xlsx",
+          "operationId": "exportThreadToXlsx",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "thread_id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "example": "{{new_document_thread_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/external/list": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Get Externally Shared Threads",
+          "operationId": "listExternalThreads",
+          "description": "Retrieve details on a list of threads\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "external": {
+                      "type": "string",
+                      "description": "true or false. Returns company documents with external users if true. Default is false."
+                    },
+                    "link_shared": {
+                      "type": "string",
+                      "description": "true or false. Returns company documents with external link sharing enabled if true. Default is false."
+                    },
+                    "offset": {
+                      "type": "string",
+                      "description": "Number of threads to skip before returning results. Default is 0."
+                    },
+                    "max_size": {
+                      "type": "string",
+                      "description": "Maximum number of threads to return. Default is 1,000.\n"
+                    }
+                  },
+                  "required": [
+                    "company_id"
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Get Externally Shared Threads",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "example": [
+                      {
+                        "title": "Welcome to Quip",
+                        "creation_usec": 1599591708243925,
+                        "owning_company_id": "cDMAcA8KJDk",
+                        "owner_type": "Managed",
+                        "company_members": 2,
+                        "external_members": 3
+                      },
+                      {
+                        "title": "Pizza Thread 4",
+                        "creation_usec": 1598914920927832,
+                        "owning_company_id": "BCZAcAeV9Uj",
+                        "owner_type": "This Site",
+                        "company_members": 15,
+                        "external_members": 6
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/{id}": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Get a Thread",
+          "operationId": "getThread",
+          "description": "Retrieve information about a specific thread.\n",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The ID of the thread to inspect"
+            },
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Get a Thread",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "thread": {
+                        "author_id": "VLP9EAwREEs",
+                        "thread_class": "document",
+                        "id": "UaU9AAX4O8t",
+                        "created_usec": 1558125528931838,
+                        "updated_usec": 1558416856049619,
+                        "title": "Untitled",
+                        "link": "https://corp.quip.com/Os2mAY8uPVaQ",
+                        "type": "document",
+                        "is_deleted": false
+                      },
+                      "user_ids": [
+                        "VLP9EAwREEs"
+                      ],
+                      "shared_folder_ids": [],
+                      "expanded_user_ids": [
+                        "VLP9EAwREEs"
+                      ],
+                      "invited_user_emails": [],
+                      "access_levels": {
+                        "VLP9EAwREEs": {
+                          "access_level": "OWN"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/list": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "List Threads",
+          "operationId": "listThreads",
+          "description": "Returns a list of all threads in the company along with a timestamp\nwhen they were last modified.\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "page": {
+                      "type": "string",
+                      "description": "number used for pagination"
+                    },
+                    "since_timestamp": {
+                      "type": "string",
+                      "description": "epoch time in seconds to fetch since"
+                    },
+                    "until_timestamp": {
+                      "type": "string",
+                      "description": "epoch time in seconds to fetch since"
+                    },
+                    "sorted_by": {
+                      "type": "string",
+                      "description": "Values can be 'ASC' or 'DESC'"
+                    },
+                    "query_token": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "company_id"
+                  ]
+                }
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/x-www-form-urlencoded"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Get Threads by ID",
+          "operationId": "getThreadsById",
+          "description": "Retrieve details on a list of threads\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "ids",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "A comma separated list of thread IDs",
+              "example": "UcZ9AAhvqrc,AVN9AAeqq5w"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A JSON array of thread data",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object"
+                  },
+                  "example": {
+                    "AVN9AAeqq5w": {
+                      "author_id": "LJa9EAtQi98",
+                      "thread_class": "document",
+                      "id": "AVN9AAeqq5w",
+                      "created_usec": 1519926805974011,
+                      "updated_usec": 1558224928731511,
+                      "title": "❗️ very important cat pics ❗️",
+                      "link": "https://corp.quip.com/klUsAqWxr8Ne",
+                      "type": "document",
+                      "is_deleted": false,
+                      "user_ids": [],
+                      "shared_folder_ids": [
+                        "RKa9OAiGmsC"
+                      ],
+                      "expanded_user_ids": [
+                        "PZF9EA0i0ef",
+                        "dHe9EABHRsb",
+                        "EHY9EAokwO3"
+                      ],
+                      "invited_user_emails": [],
+                      "PZF9EA0i0ef": {
+                        "access_level": "OWN"
+                      },
+                      "dHe9EABHRsb": {
+                        "access_level": "VIEW"
+                      },
+                      "EHY9EAokwO3": {
+                        "access_level": "EDIT"
+                      },
+                      "html": "..."
+                    },
+                    "UcZ9AAhvqrc": {
+                      "author_id": "KLf9EAPrxbs",
+                      "thread_class": "document",
+                      "id": "UcZ9AAhvqrc",
+                      "created_usec": 1553875833997942,
+                      "updated_usec": 1558416856485215,
+                      "title": "LFG",
+                      "sharing": {
+                        "company_id": "eaM9cAYW16x",
+                        "company_mode": "EDIT"
+                      },
+                      "link": "https://corp.quip.com/vKLyAnao5u2R",
+                      "type": "document",
+                      "is_deleted": false,
+                      "user_ids": [],
+                      "shared_folder_ids": [
+                        "RKH9OAELPKV"
+                      ],
+                      "expanded_user_ids": [
+                        "PZF9EA0i0ef",
+                        "IPX9EAmMSP0",
+                        "ICe9EAuECt9",
+                        "AOR9EACeKjK"
+                      ],
+                      "invited_user_emails": [],
+                      "PZF9EA0i0ef": {
+                        "access_level": "COMMENT"
+                      },
+                      "IPX9EAmMSP0": {
+                        "access_level": "VIEW"
+                      },
+                      "ICe9EAuECt9": {
+                        "access_level": "EDIT"
+                      },
+                      "AOR9EACeKjK": {
+                        "access_level": "OWN"
+                      },
+                      "html": "<h1 id='UcZ9CAK0DQz'>LFG</h1>\n<p id='UcZ9CA91kZu' class='line'>​</p>\n<p id='UcZ9CAGumhq' class='line'>​</p>\n"
+                    }
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Not authorized to get these threads."
+            }
+          }
+        }
+      },
+      "/admin/threads/new-document": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Create a Document, Spreadsheet or Slides",
+          "operationId": "newDocument",
+          "description": "Creates a document, spreadsheet, or slides, returning the new thread\nin the same format as [Get Thread](#operation/getThread).\n\nNote that for slides threads, this endpoint currently only supports\ncreating a bare-bones, one-slide deck with a given title. [Copy a\nDocument or Template](#operation/copyDocumentOrTemplate) provides\nfuller slides functionality, allowing automatic creation of a new\nslide deck adapted from an existing one.\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "format": {
+                      "type": "string",
+                      "description": "Either `html` or `markdown`. Defaults to `html`.\n"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "The html or [markdown](https://daringfireball.net/projects/markdown/) content of the new document."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "The title of the new document. If not specified, we infer the title from the first content of the document, e.g., the first heading."
+                    },
+                    "member_ids": {
+                      "type": "string",
+                      "description": "A comma-separated list of folder IDs or user IDs. The document will be placed in the specified folders, and any individual users listed will be granted individual access to the document. If this argument is not given, the document is created in the authenticated user's Private folder.\n"
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "Either `document`, `spreadsheet` or `slides`. Defaults to `document`."
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "content"
+                  ]
+                }
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/x-www-form-urlencoded"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/threads/remove-external-members": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Remove All External Users from a Thread",
+          "operationId": "removeExternalThreadMembers",
+          "description": "All external users will be removed from the thread.\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "thread_id": {
+                      "type": "string",
+                      "description": "The thread from which you want to remove all external users from\n"
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "thread_id"
+                  ]
+                }
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/x-www-form-urlencoded"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/remove-members": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_MANAGE"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Remove People from a Thread or Remove a Thread from Folders",
+          "operationId": "removeThreadMembers",
+          "description": "The member_ids parameter must contain a list of folder IDs and user\nIDS. Specified users will be removed from the thread and the thread\nwill be removed from specified folders.\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "thread_id": {
+                      "type": "string",
+                      "description": "The thread from which you want to remove folders and users.\n"
+                    },
+                    "member_ids": {
+                      "type": "string",
+                      "description": "A comma-separated list of folder IDs and user IDs. We remove each user ID individually from the thread. We remove the thread from each of the specified folder IDs."
+                    }
+                  },
+                  "required": [
+                    "company_id",
+                    "thread_id",
+                    "member_ids"
+                  ]
+                }
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "in": "header",
+              "schema": {
+                "type": "string"
+              },
+              "example": "application/x-www-form-urlencoded"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/search": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Threads"
+          ],
+          "summary": "Search for Threads",
+          "operationId": "searchForThreads",
+          "description": "Returns all documents that contain words specified in the \"query\"\nparameter.\n\n\nAdditional rate limits, separate from overall Admin API\n[Rate Limit](#section/Rate-Limit), are imposed for paginating over\nadmin search results.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "query",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "A string to search for",
+              "example": "<words to match in docs>"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "description": "number used for pagination. Defaults to `1`"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/threads/set-live-reports-owner": {},
+      "/admin/users/admin-role": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Admin Roles"
+          ],
+          "summary": "Get Admin Role for a User",
+          "operationId": "getAdminRoleForUser",
+          "description": "Returns the admin role id and admin role name given a user id.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{company_id}}"
+            },
+            {
+              "name": "user_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The user to use",
+              "example": "{{user_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        },
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Admin Roles"
+          ],
+          "summary": "Set Admin Role for a User",
+          "operationId": "setAdminRoleForUser",
+          "description": "Updates a given user's admin role.",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{company_id}}"
+            },
+            {
+              "name": "user_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The user to use",
+              "example": "{{user_id}}"
+            },
+            {
+              "name": "admin_role_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The admin role to set to",
+              "example": "{{admin_role_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        },
+        "delete": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_WRITE"
+              ]
+            }
+          ],
+          "tags": [
+            "Admin Roles"
+          ],
+          "summary": "Delete Admin Role for a User",
+          "operationId": "deleteAdminRoleForUser",
+          "description": "Removes a given user's admin role and removes them as an admin.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{company_id}}"
+            },
+            {
+              "name": "user_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The user to use",
+              "example": "{{user_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/company/admin-roles": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Admin Roles"
+          ],
+          "summary": "Get Admin Roles for a Company",
+          "operationId": "getAdminRolesForCompany",
+          "description": "Returns a list of all the admin role ids and admin role names.\n",
+          "parameters": [
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{company_id}}"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      },
+      "/admin/users/{id}": {
+        "get": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Users"
+          ],
+          "summary": "Get Information about a User",
+          "operationId": "getUserInfo",
+          "description": "Returns information about the specified user. When no optional\nparameters are present, the return value is a dictionary that contains\nthree lists, one for each of the user's threads, contacts and\ncompanies.\n\n\nFor larger companies, this information can become too large to\nreturn in one request. There are four optional parameters that\nclients can use to page through this information.\n\n### Optional Parameters\n\n* `since_updated_usec` - limits the number of entries in the 'threads'\nfield of the response to just those that have an updated_usec value\ngreater than or equal to this value.\n\n* `include_deleted` - includes deleted threads that the user was a\nmember of in the results.\n\n* `thread_ids` - limits the returned threads to those specifically\nreference by this argument.\n\n* `threads_meta` - changes the form of the response. When this\nargument is present, the list of threads is replaced with a `meta`\nfield that contains the `updated_usec` and `is_deleted` values for\neach thread.\n\n\nThese four parameters can be used in any combination with the expected\nresult.\n",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The user to get information for",
+              "example": "{{admin_get_user_id}}"
+            },
+            {
+              "name": "company_id",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "The company to use",
+              "example": "{{admin_company_id}}"
+            },
+            {
+              "name": "threads_meta",
+              "in": "query",
+              "schema": {
+                "type": "boolean"
+              },
+              "description": "true/false, if true will limit the response fields to just the `thread_id`s and their `last_updated` timestamp. default: false",
+              "example": true
+            },
+            {
+              "name": "since_updated_usec",
+              "in": "query",
+              "schema": {
+                "type": "integer"
+              },
+              "description": "epoch seconds. Limits results to threads that have been updated after <value>",
+              "example": 1541016510656993
+            },
+            {
+              "name": "include_deleted",
+              "in": "query",
+              "schema": {
+                "type": "boolean"
+              },
+              "description": "true/false, if true will return deleted users in addition to existing users. Default false",
+              "example": false
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Get Information about a User",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "example": {
+                      "name": "Rita Smith",
+                      "emails": [
+                        "rita@quip.com"
+                      ],
+                      "id": "VLP9EAwREEs",
+                      "created_usec": 1552521339058795,
+                      "is_robot": false,
+                      "affinity": 0,
+                      "desktop_folder_id": "AMO9OAGJma7",
+                      "archive_folder_id": "AMO9OABZPUw",
+                      "starred_folder_id": "AMO9OALLvIj",
+                      "private_folder_id": "AMO9OAEnK3w",
+                      "shared_folder_ids": [],
+                      "group_folder_ids": [
+                        "RKH9OAELPKV"
+                      ],
+                      "disabled": false,
+                      "profile_picture_url": "https://quip-cdn.com/vxTAbl8chaw2_GEogVEZsA\n",
+                      "threads": {
+                        "meta": {
+                          "AVN9AAeqq5w": {
+                            "updated_usec": 1558224928731511,
+                            "is_deleted": false
+                          },
+                          "fbI9AAbDHaf": {
+                            "updated_usec": 1558480668573063,
+                            "is_deleted": false
+                          },
+                          "feW9AAOL8dH": {
+                            "updated_usec": 1558482746511269,
+                            "is_deleted": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/users/list": {
+        "post": {
+          "security": [
+            {
+              "OAuth2": [
+                "ADMIN_READ"
+              ]
+            }
+          ],
+          "tags": [
+            "Users"
+          ],
+          "summary": "List Users at a Company",
+          "operationId": "listUsersAtCompany",
+          "description": "Returns a list of users in the company.The list contains the name,\nemails, and id of each user.\n",
+          "requestBody": {
+            "content": {
+              "application/x-www-form-urlencoded": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "company_id": {
+                      "type": "string",
+                      "description": "The company to use"
+                    },
+                    "count": {
+                      "type": "string",
+                      "description": "Maximum number of users to return. Default is 25,000.\n"
+                    },
+                    "offset": {
+                      "type": "string",
+                      "description": "Number of users to skip before returning results.\nDefault is 0.\n"
+                    }
+                  },
+                  "required": [
+                    "company_id"
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
